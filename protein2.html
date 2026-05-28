@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Simulasi DNA → Protein</title>
+
+<style>
+body {
+    font-family: Arial;
+    text-align: center;
+    background: linear-gradient(135deg,#cfe8ff,#eaf4ff,#ffffff);
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 30px;
+    gap: 10px;
+}
+
+.strand {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+}
+
+.base {
+    width: 50px;
+    height: 50px;
+    border-radius: 10px;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: bold;
+    color: #1a1a1a;
+    border: 2px solid #90caf9;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+
+.base.A { background: #b388ff; color:white; }
+.base.T { background: #ff6b6b; color:white; }
+.base.C { background: #51cf66; color:white; }
+.base.G { background: #ffa94d; color:white; }
+.base.U { background: #ff6b6b; color:white; }
+
+.line {
+    width: 40px;
+    height: 3px;
+    background: #555;
+    margin: auto;
+    border-radius: 2px;
+    opacity: 0;
+    transform: scaleX(0);
+    transition: 0.3s;
+}
+
+.line.active {
+    opacity: 1;
+    transform: scaleX(1);
+}
+
+.mode-btn {
+    margin: 5px;
+    padding: 8px 15px;
+    cursor: pointer;
+    background: #ddd;
+    border: none;
+    border-radius: 5px;
+}
+
+.mode-btn.active {
+    background: #4CAF50;
+    color: white;
+}
+
+.ribo {
+    outline: 3px solid #2b7cff;
+    transform: scale(1.1);
+}
+</style>
+</head>
+
+<body>
+
+<h2>Simulasi DNA → RNA → Protein</h2>
+
+<div>
+<button id="btnDNA" class="mode-btn" onclick="setMode('dna')">DNA</button>
+<button id="btnTranskripsi" class="mode-btn" onclick="setMode('transkripsi')">Transkripsi</button>
+<button id="btnTranslasi" class="mode-btn" onclick="setMode('translasi')">Translasi</button>
+</div>
+
+<p id="info"></p>
+
+<div class="container">
+
+<div style="display:flex; align-items:center; gap:10px;">
+    <span id="labelTop" style="width:130px; font-weight:bold;"></span>
+    <div class="strand left" id="leftStrand"></div>
+</div>
+
+<div class="strand" id="lines"></div>
+
+<div style="display:flex; align-items:center; gap:10px;">
+    <span id="labelBottom" style="width:130px; font-weight:bold;"></span>
+    <div class="strand right" id="rightStrand"></div>
+</div>
+
+</div>
+
+<br>
+
+<div>
+<button onclick="pilih('A')">A</button>
+<button onclick="pilih('T')">T</button>
+<button onclick="pilih('G')">G</button>
+<button onclick="pilih('C')">C</button>
+</div>
+
+<h3>RNA (kodon):</h3>
+<p id="kodon"></p>
+
+<h3>Protein:</h3>
+<p id="protein"></p>
+
+<script>
+let mode="dna";
+let index=0;
+let rnaSequence=[];
+let map = {};
+
+let leftStrand=document.getElementById("leftStrand");
+let rightStrand=document.getElementById("rightStrand");
+let lines=document.getElementById("lines");
+
+for(let i=0;i<9;i++){
+    let l=document.createElement("div");
+    l.className="base";
+    l.innerText="_";
+    leftStrand.appendChild(l);
+
+    let line=document.createElement("div");
+    line.className="line";
+    lines.appendChild(line);
+
+    let r=document.createElement("div");
+    r.className="base";
+    r.innerText="_";
+    rightStrand.appendChild(r);
+}
+
+function setMode(m){
+    mode=m;
+    index=0;
+    rnaSequence=[];
+// 🔥 TAMBAHKAN INI
+    if(mode === "dna"){
+        map = {"A":"T","T":"A","G":"C","C":"G"};
+    }
+    else if(mode === "transkripsi"){
+        map = {"A":"U","T":"A","G":"C","C":"G"};
+    }
+    else if(mode === "translasi"){
+        map = {"A":"U","U":"A","G":"C","C":"G"};
+    }
+
+    document.querySelectorAll(".mode-btn").forEach(btn=>{
+        btn.classList.remove("active");
+    });
+
+    // 🔥 FIX tombol aktif (biar bisa balik ke DNA)
+    if(m==="dna"){
+        document.getElementById("btnDNA").classList.add("active");
+    }
+    else if(m==="transkripsi"){
+        document.getElementById("btnTranskripsi").classList.add("active");
+    }
+    else if(m==="translasi"){
+        document.getElementById("btnTranslasi").classList.add("active");
+    }
+
+    document.querySelectorAll(".base").forEach(b=>{
+        b.innerText="_";
+        b.className="base";
+    });
+
+    document.querySelectorAll(".line").forEach(l=>{
+        l.classList.remove("active");
+    });
+
+    document.getElementById("kodon").innerText="";
+    document.getElementById("protein").innerText="";
+
+    let top = document.getElementById("labelTop");
+    let bottom = document.getElementById("labelBottom");
+
+    if(mode==="dna"){
+        top.innerText="DNA";
+        bottom.innerText="DNA";
+    }
+    else if(mode==="transkripsi"){
+        top.innerText="DNA (template)";
+        bottom.innerText="mRNA";
+    }
+    else if(mode==="translasi"){
+        top.innerText="mRNA";
+        bottom.innerText="tRNA";
+    }
+}
+
+function pilih(huruf){
+    if(index>=9)return;
+
+    let left=document.querySelectorAll(".left .base")[index];
+    let right=document.querySelectorAll(".right .base")[index];
+    let line=document.querySelectorAll("#lines .line")[index];
+
+    left.className="base";
+    right.className="base";
+
+    // 🔥 AUTO T → U saat translasi
+    if(mode === "translasi" && huruf === "T"){
+        huruf = "U";
+    }
+
+    left.innerText=huruf;
+    left.classList.add(huruf);
+
+    let hasil = map[huruf];
+
+    right.innerText=hasil;
+    right.classList.add(hasil);
+
+    line.classList.add("active");
+
+    if(mode==="translasi"){
+        rnaSequence.push(hasil);
+        updateProtein();
+
+        if(rnaSequence.length % 3 === 0){
+            jalanRibosomStep(rnaSequence.length);
+        }
+    }
+
+    index++;
+}
+
+function updateProtein(){
+    let kodonText="";
+    let proteinText="";
+
+    for(let i=0;i<rnaSequence.length;i+=3){
+        let codon=rnaSequence.slice(i,i+3).join("");
+        if(codon.length<3) continue;
+
+        kodonText+=codon+" ";
+
+        let aa=translate(codon);
+        proteinText+=aa+" - ";
+    }
+
+    document.getElementById("kodon").innerText=kodonText;
+    document.getElementById("protein").innerText=proteinText;
+}
+
+function jalanRibosomStep(jumlah){
+    let cells = document.querySelectorAll(".right .base");
+
+    cells.forEach(c => c.classList.remove("ribo"));
+
+    let start = jumlah - 3;
+
+    for(let i=start; i<jumlah; i++){
+        if(cells[i]){
+            cells[i].classList.add("ribo");
+        }
+    }
+}
+
+const codonTable = {
+"AUG":"Metionin (Start)",
+
+"UUU":"Fenilalanin","UUC":"Fenilalanin",
+"UUA":"Leusin","UUG":"Leusin",
+"CUU":"Leusin","CUC":"Leusin","CUA":"Leusin","CUG":"Leusin",
+
+"AUU":"Isoleusin","AUC":"Isoleusin","AUA":"Isoleusin",
+
+"GUU":"Valin","GUC":"Valin","GUA":"Valin","GUG":"Valin",
+
+"UCU":"Serin","UCC":"Serin","UCA":"Serin","UCG":"Serin",
+"AGU":"Serin","AGC":"Serin",
+
+"CCU":"Prolin","CCC":"Prolin","CCA":"Prolin","CCG":"Prolin",
+
+"ACU":"Treonin","ACC":"Treonin","ACA":"Treonin","ACG":"Treonin",
+
+"GCU":"Alanin","GCC":"Alanin","GCA":"Alanin","GCG":"Alanin",
+
+"UAU":"Tirosin","UAC":"Tirosin",
+
+"CAU":"Histidin","CAC":"Histidin",
+
+"CAA":"Glutamin","CAG":"Glutamin",
+
+"AAU":"Asparagin","AAC":"Asparagin",
+
+"AAA":"Lisin","AAG":"Lisin",
+
+"GAU":"Asam Aspartat","GAC":"Asam Aspartat",
+
+"GAA":"Asam Glutamat","GAG":"Asam Glutamat",
+
+"UGU":"Sistein","UGC":"Sistein",
+
+"UGG":"Triptofan",
+
+"CGU":"Arginin","CGC":"Arginin","CGA":"Arginin","CGG":"Arginin",
+"AGA":"Arginin","AGG":"Arginin",
+
+"GGU":"Glisin","GGC":"Glisin","GGA":"Glisin","GGG":"Glisin",
+
+"UAA":"STOP","UAG":"STOP","UGA":"STOP"
+};
+
+function translate(c){
+    const result = codonTable[c] || "Tidak diketahui";
+    return result;
+}
+
+setMode("dna");
+</script>
+
+</body>
+</html>
